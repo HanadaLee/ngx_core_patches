@@ -1,0 +1,135 @@
+diff --git a/src/http/modules/ngx_http_slice_filter_module.c b/src/http/modules/ngx_http_slice_filter_module.c
+index 186380a..d7695cc 100644
+--- a/src/http/modules/ngx_http_slice_filter_module.c
++++ b/src/http/modules/ngx_http_slice_filter_module.c
+@@ -12,6 +12,7 @@
+ 
+ typedef struct {
+     size_t               size;
++    ngx_uint_t           allowed_methods;
+ } ngx_http_slice_loc_conf_t;
+ 
+ 
+@@ -48,6 +49,25 @@ static ngx_int_t ngx_http_slice_add_variables(ngx_conf_t *cf);
+ static ngx_int_t ngx_http_slice_init(ngx_conf_t *cf);
+ 
+ 
++static ngx_conf_bitmask_t  ngx_http_slice_allow_method_mask[] = {
++    { ngx_string("GET"),      NGX_HTTP_GET },
++    { ngx_string("HEAD"),     NGX_HTTP_HEAD },
++    { ngx_string("POST"),     NGX_HTTP_POST },
++    { ngx_string("PUT"),      NGX_HTTP_PUT },
++    { ngx_string("DELETE"),   NGX_HTTP_DELETE },
++    { ngx_string("MKCOL"),    NGX_HTTP_MKCOL },
++    { ngx_string("COPY"),     NGX_HTTP_COPY },
++    { ngx_string("MOVE"),     NGX_HTTP_MOVE },
++    { ngx_string("OPTIONS"),  NGX_HTTP_OPTIONS },
++    { ngx_string("PROPFIND"), NGX_HTTP_PROPFIND },
++    { ngx_string("LOCK"),     NGX_HTTP_LOCK },
++    { ngx_string("UNLOCK"),   NGX_HTTP_UNLOCK },
++    { ngx_string("PATCH"),    NGX_HTTP_PATCH },
++    { ngx_string("TRACE"),    NGX_HTTP_TRACE },
++    { ngx_null_string, 0 }
++};
++
++
+ static ngx_command_t  ngx_http_slice_filter_commands[] = {
+ 
+     { ngx_string("slice"),
+@@ -57,6 +77,13 @@ static ngx_command_t  ngx_http_slice_filter_commands[] = {
+       offsetof(ngx_http_slice_loc_conf_t, size),
+       NULL },
+ 
++    { ngx_string("slice_allow_methods"),
++      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_1MORE,
++      ngx_conf_set_bitmask_slot,
++      NGX_HTTP_LOC_CONF_OFFSET,
++      offsetof(ngx_http_slice_loc_conf_t, allowed_methods),
++      &ngx_http_slice_allow_method_mask },
++
+       ngx_null_command
+ };
+ 
+@@ -113,6 +140,12 @@ ngx_http_slice_header_filter(ngx_http_request_t *r)
+         return ngx_http_next_header_filter(r);
+     }
+ 
++    slcf = ngx_http_get_module_loc_conf(r, ngx_http_slice_filter_module);
++
++    if (!(r->method & slcf->allowed_methods)) {
++        return ngx_http_next_header_filter(r);
++    }
++
+     if (r->headers_out.status != NGX_HTTP_PARTIAL_CONTENT) {
+         if (r == r->main) {
+             ngx_http_set_ctx(r, NULL, ngx_http_slice_filter_module);
+@@ -159,8 +192,6 @@ ngx_http_slice_header_filter(ngx_http_request_t *r)
+                    "http slice response range: %O-%O/%O",
+                    cr.start, cr.end, cr.complete_length);
+ 
+-    slcf = ngx_http_get_module_loc_conf(r, ngx_http_slice_filter_module);
+-
+     end = ngx_min(cr.start + (off_t) slcf->size, cr.complete_length);
+ 
+     if (cr.start != ctx->start || cr.end != end) {
+@@ -228,6 +259,12 @@ ngx_http_slice_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
+         return ngx_http_next_body_filter(r, in);
+     }
+ 
++    slcf = ngx_http_get_module_loc_conf(r, ngx_http_slice_filter_module);
++
++    if (!(r->method & slcf->allowed_methods)) {
++        return ngx_http_next_header_filter(r);
++    }
++
+     for (cl = in; cl; cl = cl->next) {
+         if (cl->buf->last_buf) {
+             cl->buf->last_buf = 0;
+@@ -272,8 +309,6 @@ ngx_http_slice_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
+ 
+     ngx_http_set_ctx(ctx->sr, ctx, ngx_http_slice_filter_module);
+ 
+-    slcf = ngx_http_get_module_loc_conf(r, ngx_http_slice_filter_module);
+-
+     ctx->range.len = ngx_sprintf(ctx->range.data, "bytes=%O-%O", ctx->start,
+                                  ctx->start + (off_t) slcf->size - 1)
+                      - ctx->range.data;
+@@ -400,15 +435,14 @@ ngx_http_slice_range_variable(ngx_http_request_t *r,
+     ngx_http_slice_loc_conf_t  *slcf;
+ 
+     ctx = ngx_http_get_module_ctx(r, ngx_http_slice_filter_module);
++    slcf = ngx_http_get_module_loc_conf(r, ngx_http_slice_filter_module);
+ 
+-    if (ctx == NULL) {
++    if (ctx == NULL || !(r->method & slcf->allowed_methods)) {
+         if (r != r->main || r->headers_out.status) {
+             v->not_found = 1;
+             return NGX_OK;
+         }
+ 
+-        slcf = ngx_http_get_module_loc_conf(r, ngx_http_slice_filter_module);
+-
+         if (slcf->size == 0) {
+             v->not_found = 1;
+             return NGX_OK;
+@@ -504,6 +538,7 @@ ngx_http_slice_create_loc_conf(ngx_conf_t *cf)
+     }
+ 
+     slcf->size = NGX_CONF_UNSET_SIZE;
++    slcf->allowed_methods = 0;
+ 
+     return slcf;
+ }
+@@ -517,6 +552,12 @@ ngx_http_slice_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
+ 
+     ngx_conf_merge_size_value(conf->size, prev->size, 0);
+ 
++    if (conf->allow_methods == 0) {
++        conf->allow_methods = prev->allow_methods;
++    }
++
++    conf->allow_methods |= NGX_HTTP_GET|NGX_HTTP_HEAD;
++
+     return NGX_CONF_OK;
+ }
+ 

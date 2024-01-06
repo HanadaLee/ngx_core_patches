@@ -1,5 +1,5 @@
 diff --git a/src/http/modules/ngx_http_slice_filter_module.c b/src/http/modules/ngx_http_slice_filter_module.c
-index 186380a..d7695cc 100644
+index 186380a..4cacd1c 100644
 --- a/src/http/modules/ngx_http_slice_filter_module.c
 +++ b/src/http/modules/ngx_http_slice_filter_module.c
 @@ -12,6 +12,7 @@
@@ -94,25 +94,23 @@ index 186380a..d7695cc 100644
      ctx->range.len = ngx_sprintf(ctx->range.data, "bytes=%O-%O", ctx->start,
                                   ctx->start + (off_t) slcf->size - 1)
                       - ctx->range.data;
-@@ -400,15 +435,14 @@ ngx_http_slice_range_variable(ngx_http_request_t *r,
-     ngx_http_slice_loc_conf_t  *slcf;
- 
-     ctx = ngx_http_get_module_ctx(r, ngx_http_slice_filter_module);
-+    slcf = ngx_http_get_module_loc_conf(r, ngx_http_slice_filter_module);
- 
--    if (ctx == NULL) {
-+    if (ctx == NULL || !(r->method & slcf->allow_methods)) {
-         if (r != r->main || r->headers_out.status) {
-             v->not_found = 1;
+@@ -407,9 +442,14 @@ ngx_http_slice_range_variable(ngx_http_request_t *r,
              return NGX_OK;
          }
  
--        slcf = ngx_http_get_module_loc_conf(r, ngx_http_slice_filter_module);
--
-         if (slcf->size == 0) {
++        if (slcf->size == 0) {
++            v->not_found = 1;
++            return NGX_OK;
++        }
++
+         slcf = ngx_http_get_module_loc_conf(r, ngx_http_slice_filter_module);
+ 
+-        if (slcf->size == 0) {
++        if (!(r->method & slcf->allow_methods)) {
              v->not_found = 1;
              return NGX_OK;
-@@ -504,6 +538,7 @@ ngx_http_slice_create_loc_conf(ngx_conf_t *cf)
+         }
+@@ -504,6 +544,7 @@ ngx_http_slice_create_loc_conf(ngx_conf_t *cf)
      }
  
      slcf->size = NGX_CONF_UNSET_SIZE;
@@ -120,7 +118,7 @@ index 186380a..d7695cc 100644
  
      return slcf;
  }
-@@ -517,6 +552,12 @@ ngx_http_slice_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
+@@ -517,6 +558,12 @@ ngx_http_slice_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
  
      ngx_conf_merge_size_value(conf->size, prev->size, 0);
  

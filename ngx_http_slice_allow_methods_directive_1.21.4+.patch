@@ -1,5 +1,5 @@
 diff --git a/src/http/modules/ngx_http_slice_filter_module.c b/src/http/modules/ngx_http_slice_filter_module.c
-index 186380a..4cacd1c 100644
+index 186380a..f5ef9c0 100644
 --- a/src/http/modules/ngx_http_slice_filter_module.c
 +++ b/src/http/modules/ngx_http_slice_filter_module.c
 @@ -12,6 +12,7 @@
@@ -94,22 +94,29 @@ index 186380a..4cacd1c 100644
      ctx->range.len = ngx_sprintf(ctx->range.data, "bytes=%O-%O", ctx->start,
                                   ctx->start + (off_t) slcf->size - 1)
                       - ctx->range.data;
-@@ -407,9 +442,14 @@ ngx_http_slice_range_variable(ngx_http_request_t *r,
+@@ -399,6 +434,13 @@ ngx_http_slice_range_variable(ngx_http_request_t *r,
+     ngx_http_slice_ctx_t       *ctx;
+     ngx_http_slice_loc_conf_t  *slcf;
+ 
++    slcf = ngx_http_get_module_loc_conf(r, ngx_http_slice_filter_module);
++
++    if (!(r->method & slcf->allow_methods)) {
++        v->not_found = 1;
++        return NGX_OK;
++    }
++
+     ctx = ngx_http_get_module_ctx(r, ngx_http_slice_filter_module);
+ 
+     if (ctx == NULL) {
+@@ -407,8 +449,6 @@ ngx_http_slice_range_variable(ngx_http_request_t *r,
              return NGX_OK;
          }
  
-+        if (slcf->size == 0) {
-+            v->not_found = 1;
-+            return NGX_OK;
-+        }
-+
-         slcf = ngx_http_get_module_loc_conf(r, ngx_http_slice_filter_module);
- 
--        if (slcf->size == 0) {
-+        if (!(r->method & slcf->allow_methods)) {
+-        slcf = ngx_http_get_module_loc_conf(r, ngx_http_slice_filter_module);
+-
+         if (slcf->size == 0) {
              v->not_found = 1;
              return NGX_OK;
-         }
 @@ -504,6 +544,7 @@ ngx_http_slice_create_loc_conf(ngx_conf_t *cf)
      }
  

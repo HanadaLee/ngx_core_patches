@@ -53,7 +53,7 @@ There is no change in behavior for existing configurations.
 
 The original patch is from https://mailman.nginx.org/pipermail/nginx-devel/2023-November/XUGFHDLSLRTFLWIBYPSE7LTXFJHNZE3E.html
 
-This patch additionally provides grpc support.
+This patch additionally provides grpc support, Also allows setting the :authory header (From https://github.com/api7/apisix-nginx-module/blob/main/patch/1.25.3.1/nginx-grpc_set_header_authority.patch).
 
 ### Directive
 

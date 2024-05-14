@@ -51,44 +51,24 @@ specific paths.
 
 There is no change in behavior for existing configurations.
 
-The original patch is from https://mailman.nginx.org/pipermail/nginx-devel/2023-November/SHGP6CHKU5SHAGSFWYT65K5YPMDIY6DT.html
+The original patch is from https://mailman.nginx.org/pipermail/nginx-devel/2023-November/XUGFHDLSLRTFLWIBYPSE7LTXFJHNZE3E.html
 
-This patch additionally provides grpc support and provides the function of setting :authority header for grpc (from https://github.com/api7/apisix-nginx-module/blob/main/patch/1.25.3.1/nginx-grpc_set_header_authority.patch)
+This patch additionally provides grpc support.
 
 ### Directive
 
-* **Syntax:** *proxy_set_header field value [inherit];*
-
-* **Default:** *proxy_set_header Host $proxy_host; proxy_set_header Connection close;*
-
-* **Context:** *http, server, location*
-
-Allows redefining or appending fields to the request header passed to the proxied server. The value can contain text, variables, and their combinations. 
-
-These directives are inherited from the previous configuration level if and only if there are no proxy_set_header directives defined on the current level. But when the *inherit* parameter is configured for the directive, it will be inherited unless proxy_set_header_inherit is configured at this level as off.
-
 * **Syntax:** *proxy_set_header_inherit on | off;*
 
-* **Default:** *proxy_set_header_inherit on;*
+* **Default:** *proxy_set_header_inherit off;*
 
 * **Context:** *http, server, location*
 
-Blocks the merge inheritance of proxy_set_header in receiving contexts when set to off.
-
-* **Syntax:** *grpc_set_header field value [inherit];*
-
-* **Default:** *grpc_set_header Content-Length $content_length;*
-
-* **Context:** *http, server, location*
-
-Allows redefining or appending fields to the request header passed to the proxied server. The value can contain text, variables, and their combinations. 
-
-These directives are inherited from the previous configuration level if and only if there are no grpc_set_header directives defined on the current level. But when the *inherit* parameter is configured for the directive, it will be inherited unless grpc_set_header_inherit is configured at this level as off.
+Allows the merge inheritance of proxy_set_header in receiving contexts.
 
 * **Syntax:** *grpc_set_header_inherit on | off;*
 
-* **Default:** *grpc_set_header_inherit on;*
+* **Default:** *grpc_set_header_inherit off;*
 
 * **Context:** *http, server, location*
 
-Blocks the merge inheritance of grpc_set_header in receiving contexts when set to off.
+Allows the merge inheritance of grpc_set_header in receiving contexts.

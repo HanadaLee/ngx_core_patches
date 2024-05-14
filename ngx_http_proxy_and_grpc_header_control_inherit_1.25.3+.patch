@@ -1,20 +1,8 @@
 diff --git a/src/http/modules/ngx_http_grpc_module.c b/src/http/modules/ngx_http_grpc_module.c
-index dfe49c5..e053f48 100644
+index dfe49c5..8205e38 100644
 --- a/src/http/modules/ngx_http_grpc_module.c
 +++ b/src/http/modules/ngx_http_grpc_module.c
-@@ -9,6 +9,11 @@
- #include <ngx_core.h>
- #include <ngx_http.h>
- 
-+typedef struct  {
-+    ngx_str_t                  key;
-+    ngx_str_t                  value;
-+    ngx_uint_t                 inherit;  /* unsigned  inherit:1 */
-+} ngx_http_grpc_header_src_t;
- 
- typedef struct {
-     ngx_array_t               *flushes;
-@@ -30,6 +35,8 @@ typedef struct {
+@@ -30,6 +30,8 @@ typedef struct {
      ngx_array_t               *grpc_lengths;
      ngx_array_t               *grpc_values;
  
@@ -23,24 +11,7 @@ index dfe49c5..e053f48 100644
  #if (NGX_HTTP_SSL)
      ngx_uint_t                 ssl;
      ngx_uint_t                 ssl_protocols;
-@@ -203,6 +210,8 @@ static ngx_int_t ngx_http_grpc_init_headers(ngx_conf_t *cf,
- 
- static char *ngx_http_grpc_pass(ngx_conf_t *cf, ngx_command_t *cmd,
-     void *conf);
-+static char *ngx_http_grpc_set_header(ngx_conf_t *cf, ngx_command_t *cmd,
-+    void *conf);
- 
- #if (NGX_HTTP_SSL)
- static char *ngx_http_grpc_ssl_password_file(ngx_conf_t *cf,
-@@ -331,12 +340,19 @@ static ngx_command_t  ngx_http_grpc_commands[] = {
-       NULL },
- 
-     { ngx_string("grpc_set_header"),
--      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE2,
--      ngx_conf_set_keyval_slot,
-+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE23,
-+      ngx_http_grpc_set_header,
-       NGX_HTTP_LOC_CONF_OFFSET,
+@@ -337,6 +339,13 @@ static ngx_command_t  ngx_http_grpc_commands[] = {
        offsetof(ngx_http_grpc_loc_conf_t, headers_source),
        NULL },
  
@@ -54,7 +25,7 @@ index dfe49c5..e053f48 100644
      { ngx_string("grpc_pass_header"),
        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
        ngx_conf_set_str_array_slot,
-@@ -4375,6 +4391,8 @@ ngx_http_grpc_create_loc_conf(ngx_conf_t *cf)
+@@ -4375,6 +4384,8 @@ ngx_http_grpc_create_loc_conf(ngx_conf_t *cf)
  
      conf->upstream.intercept_errors = NGX_CONF_UNSET;
  
@@ -63,31 +34,26 @@ index dfe49c5..e053f48 100644
  #if (NGX_HTTP_SSL)
      conf->upstream.ssl_session_reuse = NGX_CONF_UNSET;
      conf->upstream.ssl_name = NGX_CONF_UNSET_PTR;
-@@ -4416,9 +4434,10 @@ ngx_http_grpc_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
-     ngx_http_grpc_loc_conf_t *prev = parent;
+@@ -4417,6 +4428,8 @@ ngx_http_grpc_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
      ngx_http_grpc_loc_conf_t *conf = child;
  
--    ngx_int_t                  rc;
--    ngx_hash_init_t            hash;
--    ngx_http_core_loc_conf_t  *clcf;
-+    ngx_int_t                    rc;
-+    ngx_hash_init_t              hash;
-+    ngx_http_core_loc_conf_t    *clcf;
-+    ngx_http_grpc_header_src_t  *phs, *pphs;
+     ngx_int_t                  rc;
++    ngx_uint_t                 i;
++    ngx_keyval_t              *src, *h;
+     ngx_hash_init_t            hash;
+     ngx_http_core_loc_conf_t  *clcf;
  
-     ngx_conf_merge_ptr_value(conf->upstream.local,
-                               prev->upstream.local, NULL);
-@@ -4463,6 +4482,9 @@ ngx_http_grpc_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
+@@ -4463,6 +4476,9 @@ ngx_http_grpc_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
      ngx_conf_merge_value(conf->upstream.intercept_errors,
                                prev->upstream.intercept_errors, 0);
  
 +    ngx_conf_merge_value(conf->headers_inherit,
-+                              prev->headers_inherit, 1);
++                              prev->headers_inherit, 0);
 +
  #if (NGX_HTTP_SSL)
  
      if (ngx_http_grpc_merge_ssl(cf, conf, prev) != NGX_OK) {
-@@ -4546,6 +4568,24 @@ ngx_http_grpc_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
+@@ -4546,6 +4562,24 @@ ngx_http_grpc_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
      if (conf->headers_source == prev->headers_source) {
          conf->headers = prev->headers;
          conf->host_set = prev->host_set;
@@ -95,132 +61,28 @@ index dfe49c5..e053f48 100644
 +               && prev->headers_source
 +               && prev->headers_source != NGX_CONF_UNSET_PTR)
 +    {
-+        pphs = prev->headers_source->elts;
++        src = prev->headers_source->elts;
 +
 +        for (i = 0; i < prev->headers_source->nelts; i++) {
-+            if (!conf->headers_inherit || !pphs[i].inherit) {
++            if (!conf->headers_inherit) {
 +                continue;
 +            }
 +
-+            phs = ngx_array_push(conf->headers_source);
-+            if (phs == NULL) {
++            h = ngx_array_push(conf->headers_source);
++            if (h == NULL) {
 +                return NGX_CONF_ERROR;
 +            }
 +
-+            *phs = pphs[i];
++            *h = src[i];
 +        }
      }
  
      rc = ngx_http_grpc_init_headers(cf, conf, &conf->headers,
-@@ -4584,6 +4624,7 @@ ngx_http_grpc_init_headers(ngx_conf_t *cf, ngx_http_grpc_loc_conf_t *conf,
-     ngx_hash_init_t               hash;
-     ngx_http_script_compile_t     sc;
-     ngx_http_script_copy_code_t  *copy;
-+    ngx_http_grpc_header_src_t   *phs;
- 
-     if (headers->hash.buckets) {
-         return NGX_OK;
-@@ -4613,11 +4654,17 @@ ngx_http_grpc_init_headers(ngx_conf_t *cf, ngx_http_grpc_loc_conf_t *conf,
- 
-     if (conf->headers_source) {
- 
--        src = conf->headers_source->elts;
-+        phs = conf->headers_source->elts;
-         for (i = 0; i < conf->headers_source->nelts; i++) {
- 
--            if (src[i].key.len == 4
--                && ngx_strncasecmp(src[i].key.data, (u_char *) "Host", 4) == 0)
-+            if (phs[i].key.len == 4
-+                && ngx_strncasecmp(phs[i].key.data, (u_char *) "Host", 4) == 0)
-+            {
-+                conf->host_set = 1;
-+            }
-+
-+            if (src[i].key.len == 10
-+                && ngx_strncasecmp(src[i].key.data, (u_char *) ":authority", 10) == 0)
-             {
-                 conf->host_set = 1;
-             }
-@@ -4627,7 +4674,8 @@ ngx_http_grpc_init_headers(ngx_conf_t *cf, ngx_http_grpc_loc_conf_t *conf,
-                 return NGX_ERROR;
-             }
- 
--            *s = src[i];
-+            s->key = phs[i].key;
-+            s->value = phs[i].value;
-         }
-     }
- 
-@@ -4844,6 +4892,52 @@ ngx_http_grpc_pass(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
- }
- 
- 
-+static char *
-+ngx_http_grpc_set_header(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
-+{
-+    ngx_http_grpc_loc_conf_t *plcf = conf;
-+
-+    ngx_str_t                          *value;
-+    ngx_array_t                       **headers;
-+    ngx_http_grpc_header_src_t        *phs;
-+
-+    value = cf->args->elts;
-+
-+    headers = (ngx_array_t **) ((char *) plcf + cmd->offset);
-+
-+    if (*headers == NGX_CONF_UNSET_PTR) {
-+        *headers = ngx_array_create(cf->pool, 1,
-+                                    sizeof(ngx_http_grpc_header_src_t));
-+        if (*headers == NULL) {
-+            return NGX_CONF_ERROR;
-+        }
-+    }
-+
-+    phs = ngx_array_push(*headers);
-+    if (phs == NULL) {
-+        return NGX_CONF_ERROR;
-+    }
-+
-+    phs->key = value[1];
-+    phs->value = value[2];
-+    phs->inherit = 0;
-+
-+    if (cf->args->nelts == 3) {
-+        return NGX_CONF_OK;
-+    }
-+
-+    if (ngx_strcmp(value[3].data, "inherit") != 0) {
-+        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-+                           "invalid parameter \"%V\"", &value[3]);
-+        return NGX_CONF_ERROR;
-+    }
-+
-+    phs->inherit = 1;
-+
-+    return NGX_CONF_OK;
-+}
-+
-+
- #if (NGX_HTTP_SSL)
- 
- static char *
 diff --git a/src/http/modules/ngx_http_proxy_module.c b/src/http/modules/ngx_http_proxy_module.c
-index 4eb6931..b85ebde 100644
+index 4eb6931..cbb056a 100644
 --- a/src/http/modules/ngx_http_proxy_module.c
 +++ b/src/http/modules/ngx_http_proxy_module.c
-@@ -69,6 +69,11 @@ typedef struct {
-     ngx_str_t                      uri;
- } ngx_http_proxy_vars_t;
- 
-+typedef struct  {
-+    ngx_str_t                  key;
-+    ngx_str_t                  value;
-+    ngx_uint_t                 inherit;  /* unsigned  inherit:1 */
-+} ngx_http_proxy_header_src_t;
- 
- typedef struct {
-     ngx_array_t                   *flushes;
-@@ -117,6 +122,8 @@ typedef struct {
+@@ -117,6 +117,8 @@ typedef struct {
      ngx_uint_t                     headers_hash_max_size;
      ngx_uint_t                     headers_hash_bucket_size;
  
@@ -229,24 +91,7 @@ index 4eb6931..b85ebde 100644
  #if (NGX_HTTP_SSL)
      ngx_uint_t                     ssl;
      ngx_uint_t                     ssl_protocols;
-@@ -215,6 +222,8 @@ static char *ngx_http_proxy_cookie_flags(ngx_conf_t *cf, ngx_command_t *cmd,
-     void *conf);
- static char *ngx_http_proxy_store(ngx_conf_t *cf, ngx_command_t *cmd,
-     void *conf);
-+static char *ngx_http_proxy_set_header(ngx_conf_t *cf, ngx_command_t *cmd,
-+    void *conf);
- #if (NGX_HTTP_CACHE)
- static char *ngx_http_proxy_cache(ngx_conf_t *cf, ngx_command_t *cmd,
-     void *conf);
-@@ -409,12 +418,19 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
-       NULL },
- 
-     { ngx_string("proxy_set_header"),
--      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE2,
--      ngx_conf_set_keyval_slot,
-+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE23,
-+      ngx_http_proxy_set_header,
-       NGX_HTTP_LOC_CONF_OFFSET,
+@@ -415,6 +417,13 @@ static ngx_command_t  ngx_http_proxy_commands[] = {
        offsetof(ngx_http_proxy_loc_conf_t, headers_source),
        NULL },
  
@@ -260,7 +105,7 @@ index 4eb6931..b85ebde 100644
      { ngx_string("proxy_headers_hash_max_size"),
        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
        ngx_conf_set_num_slot,
-@@ -3400,6 +3416,8 @@ ngx_http_proxy_create_loc_conf(ngx_conf_t *cf)
+@@ -3400,6 +3409,8 @@ ngx_http_proxy_create_loc_conf(ngx_conf_t *cf)
  
      conf->upstream.intercept_errors = NGX_CONF_UNSET;
  
@@ -269,143 +114,47 @@ index 4eb6931..b85ebde 100644
  #if (NGX_HTTP_SSL)
      conf->upstream.ssl_session_reuse = NGX_CONF_UNSET;
      conf->upstream.ssl_name = NGX_CONF_UNSET_PTR;
-@@ -3444,13 +3462,15 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
-     ngx_http_proxy_loc_conf_t *prev = parent;
-     ngx_http_proxy_loc_conf_t *conf = child;
- 
--    u_char                     *p;
--    size_t                      size;
--    ngx_int_t                   rc;
--    ngx_hash_init_t             hash;
--    ngx_http_core_loc_conf_t   *clcf;
--    ngx_http_proxy_rewrite_t   *pr;
--    ngx_http_script_compile_t   sc;
-+    u_char                       *p;
-+    size_t                        size;
-+    ngx_int_t                     rc;
-+    ngx_uint_t                    i;
-+    ngx_hash_init_t               hash;
-+    ngx_http_core_loc_conf_t     *clcf;
-+    ngx_http_proxy_rewrite_t     *pr;
-+    ngx_http_script_compile_t     sc;
-+    ngx_http_proxy_header_src_t  *phs, *pphs;
- 
- #if (NGX_HTTP_CACHE)
- 
-@@ -3724,6 +3744,9 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
+@@ -3447,6 +3458,8 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
+     u_char                     *p;
+     size_t                      size;
+     ngx_int_t                   rc;
++    ngx_uint_t                  i;
++    ngx_keyval_t               *src, *h;
+     ngx_hash_init_t             hash;
+     ngx_http_core_loc_conf_t   *clcf;
+     ngx_http_proxy_rewrite_t   *pr;
+@@ -3724,6 +3737,9 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
      ngx_conf_merge_value(conf->upstream.intercept_errors,
                                prev->upstream.intercept_errors, 0);
  
 +    ngx_conf_merge_value(conf->headers_inherit,
-+                              prev->headers_inherit, 1);
++                              prev->headers_inherit, 0);
 +
  #if (NGX_HTTP_SSL)
  
      if (ngx_http_proxy_merge_ssl(cf, conf, prev) != NGX_OK) {
-@@ -3905,8 +3928,25 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
+@@ -3905,6 +3921,24 @@ ngx_http_proxy_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
  #if (NGX_HTTP_CACHE)
          conf->headers_cache = prev->headers_cache;
  #endif
--    }
 +    } else if (conf->headers_source
 +               && prev->headers_source
 +               && prev->headers_source != NGX_CONF_UNSET_PTR)
 +    {
-+        pphs = prev->headers_source->elts;
- 
++        src = prev->headers_source->elts;
++
 +        for (i = 0; i < prev->headers_source->nelts; i++) {
-+            if (!conf->headers_inherit || !pphs[i].inherit) {
++            if (!conf->headers_inherit) {
 +                continue;
 +            }
 +
-+            phs = ngx_array_push(conf->headers_source);
-+            if (phs == NULL) {
++            h = ngx_array_push(conf->headers_source);
++            if (h == NULL) {
 +                return NGX_CONF_ERROR;
 +            }
 +
-+            *phs = pphs[i];
++            *h = src[i];
 +        }
-+    }
-     rc = ngx_http_proxy_init_headers(cf, conf, &conf->headers,
-                                      ngx_http_proxy_headers);
-     if (rc != NGX_OK) {
-@@ -3957,6 +3997,7 @@ ngx_http_proxy_init_headers(ngx_conf_t *cf, ngx_http_proxy_loc_conf_t *conf,
-     ngx_hash_init_t               hash;
-     ngx_http_script_compile_t     sc;
-     ngx_http_script_copy_code_t  *copy;
-+    ngx_http_proxy_header_src_t  *phs;
- 
-     if (headers->hash.buckets) {
-         return NGX_OK;
-@@ -3986,7 +4027,7 @@ ngx_http_proxy_init_headers(ngx_conf_t *cf, ngx_http_proxy_loc_conf_t *conf,
- 
-     if (conf->headers_source) {
- 
--        src = conf->headers_source->elts;
-+        phs = conf->headers_source->elts;
-         for (i = 0; i < conf->headers_source->nelts; i++) {
- 
-             s = ngx_array_push(&headers_merged);
-@@ -3994,7 +4035,8 @@ ngx_http_proxy_init_headers(ngx_conf_t *cf, ngx_http_proxy_loc_conf_t *conf,
-                 return NGX_ERROR;
-             }
- 
--            *s = src[i];
-+            s->key = phs[i].key;
-+            s->value = phs[i].value;
-         }
      }
  
-@@ -4769,6 +4811,52 @@ ngx_http_proxy_store(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
- }
- 
- 
-+static char *
-+ngx_http_proxy_set_header(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
-+{
-+    ngx_http_proxy_loc_conf_t *plcf = conf;
-+
-+    ngx_str_t                          *value;
-+    ngx_array_t                       **headers;
-+    ngx_http_proxy_header_src_t        *phs;
-+
-+    value = cf->args->elts;
-+
-+    headers = (ngx_array_t **) ((char *) plcf + cmd->offset);
-+
-+    if (*headers == NGX_CONF_UNSET_PTR) {
-+        *headers = ngx_array_create(cf->pool, 1,
-+                                    sizeof(ngx_http_proxy_header_src_t));
-+        if (*headers == NULL) {
-+            return NGX_CONF_ERROR;
-+        }
-+    }
-+
-+    phs = ngx_array_push(*headers);
-+    if (phs == NULL) {
-+        return NGX_CONF_ERROR;
-+    }
-+
-+    phs->key = value[1];
-+    phs->value = value[2];
-+    phs->inherit = 0;
-+
-+    if (cf->args->nelts == 3) {
-+        return NGX_CONF_OK;
-+    }
-+
-+    if (ngx_strcmp(value[3].data, "inherit") != 0) {
-+        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-+                           "invalid parameter \"%V\"", &value[3]);
-+        return NGX_CONF_ERROR;
-+    }
-+
-+    phs->inherit = 1;
-+
-+    return NGX_CONF_OK;
-+}
-+
-+
- #if (NGX_HTTP_CACHE)
- 
- static char *
+     rc = ngx_http_proxy_init_headers(cf, conf, &conf->headers,

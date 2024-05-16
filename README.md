@@ -2,7 +2,7 @@
 
 Enhance nginx core to implement more functions
 
-## gx_http_slice_module_ext_1.21.4+.patch
+## ngx_http_slice_module_ext_1.21.4+.patch
 
 This patch introduces a directive slice_allow_methods to control which request methods can be sliced. In addition, slice_check_etag and slice_check_last_modified are also introduced to control whether to check the consistency of these two headers.
 

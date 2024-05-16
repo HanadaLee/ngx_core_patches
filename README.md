@@ -2,9 +2,9 @@
 
 Enhance nginx core to implement more functions
 
-## ngx_http_slice_allow_methods_directive_1.21.4+.patch
+## gx_http_slice_module_ext_1.21.4+.patch
 
-This patch introduces a directive slice_allow_methods to control which request methods can be sliced.
+This patch introduces a directive slice_allow_methods to control which request methods can be sliced. In addition, slice_check_etag and slice_check_last_modified are also introduced to control whether to check the consistency of these two headers.
 
 ### Directive
 
@@ -16,7 +16,21 @@ This patch introduces a directive slice_allow_methods to control which request m
 
 Allow splitting responses into slices if the client request method is listed in this directive. Note that if the slice directive is unset or has the zero value, splitting the response into slices will still be disabled.
 
-Test pass: Nginx 1.21.4 with OpenResty
+* **Syntax:** *slice_check_etag on | off;*
+
+* **Default:** *slice_check_etag on;*
+
+* **Context:** *http, server, location*
+
+Whether to check the consistency of the Etag header in the slice. If it is enabled, the request will be terminated and an error will be reported when Etag mismatch in slice response occurs.
+
+* **Syntax:** *slice_check_last_modified on | off;*
+
+* **Default:** *slice_check_last_modified off;*
+
+* **Context:** *http, server, location*
+
+Whether to check the consistency of the Last-Modified header in the slice. If it is enabled, the request will be terminated and an error will be reported when Last-Modified mismatch in slice response occurs.
 
 ## ngx_http_listen_https_allow_http_1.21.4+.patch
 
@@ -31,8 +45,6 @@ This patch allows accepting http or https requests in the same port, which is us
 * **Context:** *server*
 
 When both the ssl and https_allow_http parameters are enabled for the listen directive, both https or http requests will be allowed.
-
-Test pass: Nginx 1.21.4 with OpenResty
 
 ## ngx_http_proxy_and_grpc_header_control_inherit_1.25.3+.patch
 

@@ -2,7 +2,7 @@
 
 Enhance nginx core to implement more functions
 
-## ngx_http_slice_module_ext_1.21.4+.patch
+## ngx_http_slice_filter_module_ext_1.21.4+.patch
 
 This patch introduces a directive slice_allow_methods to control which request methods can be sliced. In addition, slice_check_etag and slice_check_last_modified are also introduced to control whether to check the consistency of these two headers.
 
@@ -31,6 +31,24 @@ Whether to check the consistency of the Etag header in the slice. If it is enabl
 * **Context:** *http, server, location*
 
 Whether to check the consistency of the Last-Modified header in the slice. If it is enabled, the request will be terminated and an error will be reported when Last-Modified mismatch in slice response occurs.
+
+
+## ngx_http_sub_filter_module_ext_1.25.3+.patch
+
+This patch introduces a directive sub_filter_bypass to bypass sub_filter based on the value of a set of variables.
+
+* **Syntax:** *sub_filter_bypass string ...;*
+
+* **Default:** *—*
+
+* **Context:** *http, server, location*
+
+Defines conditions under which the response will not be replaced. If at least one value of the string parameters is not empty and is not equal to “0” then the response will not be replaced.
+
+```
+sub_filter_bypass $cookie_nocache $arg_nocache$arg_comment;
+sub_filter_bypass $http_pragma    $http_authorization;
+```
 
 ## ngx_http_listen_https_allow_http_1.21.4+.patch
 

@@ -1,5 +1,5 @@
 diff --git a/src/http/modules/ngx_http_sub_filter_module.c b/src/http/modules/ngx_http_sub_filter_module.c
-index 6d3de59..623e64c 100644
+index 6d3de59..f393618 100644
 --- a/src/http/modules/ngx_http_sub_filter_module.c
 +++ b/src/http/modules/ngx_http_sub_filter_module.c
 @@ -43,6 +43,7 @@ typedef struct {
@@ -43,3 +43,19 @@ index 6d3de59..623e64c 100644
      ctx = ngx_pcalloc(r->pool, sizeof(ngx_http_sub_ctx_t));
      if (ctx == NULL) {
          return NGX_ERROR;
+@@ -877,6 +897,7 @@ ngx_http_sub_create_conf(ngx_conf_t *cf)
+ 
+     slcf->once = NGX_CONF_UNSET;
+     slcf->last_modified = NGX_CONF_UNSET;
++    slcf->bypass = NGX_CONF_UNSET_PTR;
+ 
+     return slcf;
+ }
+@@ -893,6 +914,7 @@ ngx_http_sub_merge_conf(ngx_conf_t *cf, void *parent, void *child)
+ 
+     ngx_conf_merge_value(conf->once, prev->once, 1);
+     ngx_conf_merge_value(conf->last_modified, prev->last_modified, 0);
++    ngx_conf_merge_ptr_value(conf->bypass, prev->bypass, NULL);
+ 
+     if (ngx_http_merge_types(cf, &conf->types_keys, &conf->types,
+                              &prev->types_keys, &prev->types,

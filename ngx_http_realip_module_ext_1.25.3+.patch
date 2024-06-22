@@ -9,7 +9,7 @@ index f6731e7..5c240ed 100644
 +typedef struct {
 +    ngx_uint_t type;
 +    ngx_uint_t hash;
-+    ngx_str_t header;
++    ngx_str_t name;
 +} ngx_http_realip_header_t;
  
  typedef struct {

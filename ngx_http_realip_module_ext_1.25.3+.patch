@@ -1,5 +1,5 @@
 diff --git a/src/http/modules/ngx_http_realip_module.c b/src/http/modules/ngx_http_realip_module.c
-index f6731e7..5c240ed 100644
+index f6731e7..6918da1 100644
 --- a/src/http/modules/ngx_http_realip_module.c
 +++ b/src/http/modules/ngx_http_realip_module.c
 @@ -15,12 +15,15 @@
@@ -174,12 +174,14 @@ index f6731e7..5c240ed 100644
  found:
  
      c = r->connection;
-@@ -419,32 +426,37 @@ ngx_http_realip(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+@@ -418,33 +425,38 @@ ngx_http_realip(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+ {
      ngx_http_realip_loc_conf_t *rlcf = conf;
  
-     ngx_str_t  *value;
-+    ngx_str_t  *header;
-+    ngx_uint_t  i;
+-    ngx_str_t  *value;
++    ngx_str_t                *value;
++    ngx_http_realip_header_t *header;
++    ngx_uint_t                i;
  
 -    if (rlcf->type != NGX_CONF_UNSET_UINT) {
 -        return "is duplicate";

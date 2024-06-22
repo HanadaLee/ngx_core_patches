@@ -105,13 +105,13 @@ Allows the merge inheritance of grpc_set_header in receiving contexts.
 
 ## ngx_http_realip_module_ext_1.25.3+.patch
 
-* **Syntax:** real_ip_header field | X-Real-IP | X-Forwarded-For | proxy_protocol;
-* **Default:** real_ip_header X-Real-IP;
+* **Syntax:** *real_ip_header field | X-Real-IP | X-Forwarded-For | proxy_protocol;*
+* **Default:** *real_ip_header X-Real-IP;*
 * **Context:** *http, server, location*
 
 Defines the request header fields whose value will be used to replace the client address. 
 
-**If multiple request fields are defined, the header values ​​will be checked in the order defined in the configuration, and the first header with a valid value will be used:**
+If multiple request fields are defined, the header values ​​will be checked in the order defined in the configuration, and the first header with a valid value will be used:
 
 ```
 real_ip_header X-Real-IP Cdn-Src-Ip X-Forwarded-For;

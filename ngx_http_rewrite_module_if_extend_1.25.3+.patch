@@ -1,5 +1,5 @@
 diff --git a/src/http/modules/ngx_http_rewrite_module.c b/src/http/modules/ngx_http_rewrite_module.c
-index 0e6d4df..48611b6 100644
+index 0e6d4df..6da0009 100644
 --- a/src/http/modules/ngx_http_rewrite_module.c
 +++ b/src/http/modules/ngx_http_rewrite_module.c
 @@ -39,6 +39,10 @@ static char *ngx_http_rewrite_set(ngx_conf_t *cf, ngx_command_t *cmd,
@@ -119,7 +119,7 @@ index 0e6d4df..48611b6 100644
          ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                             "unexpected \"%V\" in condition", &value[cur]);
          return NGX_CONF_ERROR;
-@@ -1017,3 +1113,477 @@ ngx_http_rewrite_value(ngx_conf_t *cf, ngx_http_rewrite_loc_conf_t *lcf,
+@@ -1017,3 +1113,487 @@ ngx_http_rewrite_value(ngx_conf_t *cf, ngx_http_rewrite_loc_conf_t *lcf,
  
      return NGX_CONF_OK;
  }
@@ -251,7 +251,7 @@ index 0e6d4df..48611b6 100644
 +    u_char                        *p;
 +    size_t                         len;
 +    ngx_str_t                     *value;
-+    ngx_uint_t                     cur, last, i, ncond;
++    ngx_uint_t                     cur, last, i, ncond, value_last;
 +    ngx_regex_compile_t            rc;
 +    ngx_http_script_code_pt       *code;
 +    ngx_http_script_file_code_t   *fop;
@@ -260,12 +260,22 @@ index 0e6d4df..48611b6 100644
 +    ngx_uint_t                     magic = 0;
 +
 +    value = cf->args->elts;
++    value_last = cf->args->nelts - 1;
 +    ncond = 0;
 +    last = 1;
 +
++    if (value[value_last].len < 1 || value[value_last].data[value[value_last].len - 1] != ')') {
++        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
++                           "invalid condition \"%V\"", &value[value_last]);
++        return NGX_CONF_ERROR;
++    }
++
 +    for (i = 1, cur = 1; i < cf->args->nelts; i++) {
 +
-+        if (value[i].len < 1 || value[i].data[value[i].len-1] != ')') {
++        if (value[i].len < 1
++                || value[i].data[value[i].len-1] != ')'
++                || (value[i].data[value[i].len-1] == ')' && i+1 != value_last && value[i+1].data[0] == '(' )
++            ) {
 +            continue;
 +        }
 +

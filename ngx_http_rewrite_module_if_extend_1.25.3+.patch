@@ -265,7 +265,7 @@ index 0e6d4df..48611b6 100644
 +
 +    for (i = 1, cur = 1; i < cf->args->nelts; i++) {
 +
-+        if (value[i].data[value[i].len-1] != ')') {
++        if (value[i].len < 1 || value[i].data[value[i].len-1] != ')') {
 +            continue;
 +        }
 +

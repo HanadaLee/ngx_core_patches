@@ -32,7 +32,6 @@ Whether to check the consistency of the Etag header in the slice. If it is enabl
 
 Whether to check the consistency of the Last-Modified header in the slice. If it is enabled, the request will be terminated and an error will be reported when Last-Modified mismatch in slice response occurs.
 
-
 ## ngx_http_sub_filter_module_ext_1.25.3+.patch
 
 This patch introduces a directive sub_filter_bypass to bypass sub_filter based on the value of a set of variables.
@@ -52,7 +51,7 @@ sub_filter_bypass $http_pragma    $http_authorization;
 
 ## ngx_http_listen_https_allow_http_1.21.4+.patch
 
-This patch allows accepting http or https requests in the same port, which is useful for scenarios where special ports are used. The original work is from Tengine.
+This patch allows accepting http or https requests in the same port, which is useful for scenarios where special ports are used. The original work is from [Tengine](https://github.com/alibaba/tengine).
 
 ### Directive
 
@@ -106,7 +105,9 @@ Allows the merge inheritance of grpc_set_header in receiving contexts.
 ## ngx_http_realip_module_ext_1.25.3+.patch
 
 * **Syntax:** *real_ip_header field | X-Real-IP | X-Forwarded-For | proxy_protocol;*
+
 * **Default:** *real_ip_header X-Real-IP;*
+
 * **Context:** *http, server, location*
 
 Defines the request header fields whose value will be used to replace the client address. 
@@ -121,3 +122,43 @@ The values ​​of the above headers will be checked in turn until a valid valu
 The request header field value that contains an optional port is also used to replace the client port (1.11.0). The address and port should be specified according to RFC 3986.
 
 The proxy_protocol parameter (1.5.12) changes the client address to the one from the PROXY protocol header. The PROXY protocol must be previously enabled by setting the proxy_protocol parameter in the listen directive.
+
+# ngx_http_rewrite_module_if_extend_1.25.3+.patch
+
+The original work [SEnginx](https://github.com/NeusoftSecurity/SEnginx)
+
+The "If Extend" module extends the "if" directive of the original NGINX "rewrite" module. It has the following features:
+
+Supports matching multiple conditions and the matching conditions can be "and" or "or".
+Except for the original "if" condition operators, also supports:
+* <
+* >
+* !< or >=
+* !> or <=
+
+* **Syntax:** *if_all (condition 1) (condition 2) ... {...}*
+
+* **Default:** *-*
+
+* **Context:** *server, location*
+
+Specify multiple conditions. If all conditions are true, then execute the directives inside the braces"{}". This directive has the same behavior as the original "if" directive, but the following condition operators are added:
+* <
+* >
+* !< or >=
+* !> or <=
+
+Example:
+```
+if_all ($remote_addr = 192.168.1.1) ($http_user_agent ~ 'Mozilla') ($server_port > 808) {
+    return 404;
+}
+```
+
+* **Syntax:** *if_any (condition 1) (condition 2) ... {...}*
+
+* **Default:** *-*
+
+* **Context:** *server, location*
+
+Specify multiple conditions. If any condition is true, then execute the directives inside the braces "{}". The other parts are the same as the "if_all" directive.

@@ -6,8 +6,6 @@ Enhance nginx core to implement more functions
 
 This patch introduces a directive slice_allow_methods to control which request methods can be sliced. In addition, slice_check_etag and slice_check_last_modified are also introduced to control whether to check the consistency of these two headers.
 
-### Directive
-
 * **Syntax:** *slice_allow_methods GET | HEAD ...;*
 
 * **Default:** *slice_allow_methods GET HEAD;*
@@ -53,8 +51,6 @@ sub_filter_bypass $http_pragma    $http_authorization;
 
 This patch allows accepting http or https requests in the same port, which is useful for scenarios where special ports are used. The original work is from [Tengine](https://github.com/alibaba/tengine).
 
-### Directive
-
 * **Syntax:** *listen address[:port] [ssl] **[https_allow_http]** ...;*
 
 * **Default:** *listen *:80 | *:8000;*
@@ -83,8 +79,6 @@ There is no change in behavior for existing configurations.
 The original patch is from https://mailman.nginx.org/pipermail/nginx-devel/2023-November/XUGFHDLSLRTFLWIBYPSE7LTXFJHNZE3E.html
 
 This patch additionally provides grpc support, Also allows setting the :authory header (From https://github.com/api7/apisix-nginx-module/blob/main/patch/1.25.3.1/nginx-grpc_set_header_authority.patch).
-
-### Directive
 
 * **Syntax:** *proxy_set_header_inherit on | off;*
 
@@ -123,11 +117,13 @@ The request header field value that contains an optional port is also used to re
 
 The proxy_protocol parameter (1.5.12) changes the client address to the one from the PROXY protocol header. The PROXY protocol must be previously enabled by setting the proxy_protocol parameter in the listen directive.
 
-# ngx_http_rewrite_module_if_extend_1.25.3+.patch
+## ngx_http_rewrite_module_if_extend_1.25.3+.patch
 
 The original work [SEnginx](https://github.com/NeusoftSecurity/SEnginx)
 
 The "If Extend" module extends the "if" directive of the original NGINX "rewrite" module. It has the following features:
+
+### more conditions for "if" directive
 
 Supports matching multiple conditions and the matching conditions can be "and" or "or".
 Except for the original "if" condition operators, also supports:
@@ -135,6 +131,8 @@ Except for the original "if" condition operators, also supports:
 * \>
 * !< or >=
 * !> or <=
+
+### "if" with multi conditions
 
 * **Syntax:** *if_all (condition 1) (condition 2) ... {...}*
 

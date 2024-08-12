@@ -119,9 +119,9 @@ The proxy_protocol parameter (1.5.12) changes the client address to the one from
 
 ## ngx_http_rewrite_module_if_extend_1.25.3+.patch
 
-The original work [SEnginx](https://github.com/NeusoftSecurity/SEnginx)
+The original work is from [SEnginx](https://github.com/NeusoftSecurity/SEnginx).
 
-The "If Extend" module extends the "if" directive of the original NGINX "rewrite" module. It has the following features:
+This patch extends the "if" directive of the original NGINX "rewrite" module. It has the following features:
 
 ### more conditions for "if" directive
 

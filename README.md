@@ -132,7 +132,7 @@ The "If Extend" module extends the "if" directive of the original NGINX "rewrite
 Supports matching multiple conditions and the matching conditions can be "and" or "or".
 Except for the original "if" condition operators, also supports:
 * <
-* >
+* \>
 * !< or >=
 * !> or <=
 
@@ -144,7 +144,7 @@ Except for the original "if" condition operators, also supports:
 
 Specify multiple conditions. If all conditions are true, then execute the directives inside the braces"{}". This directive has the same behavior as the original "if" directive, but the following condition operators are added:
 * <
-* >
+* \>
 * !< or >=
 * !> or <=
 

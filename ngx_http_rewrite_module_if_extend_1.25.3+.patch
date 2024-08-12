@@ -1,5 +1,5 @@
 diff --git a/src/http/modules/ngx_http_rewrite_module.c b/src/http/modules/ngx_http_rewrite_module.c
-index 0e6d4df..6da0009 100644
+index 0e6d4df..24daf46 100644
 --- a/src/http/modules/ngx_http_rewrite_module.c
 +++ b/src/http/modules/ngx_http_rewrite_module.c
 @@ -39,6 +39,10 @@ static char *ngx_http_rewrite_set(ngx_conf_t *cf, ngx_command_t *cmd,
@@ -119,7 +119,7 @@ index 0e6d4df..6da0009 100644
          ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                             "unexpected \"%V\" in condition", &value[cur]);
          return NGX_CONF_ERROR;
-@@ -1017,3 +1113,487 @@ ngx_http_rewrite_value(ngx_conf_t *cf, ngx_http_rewrite_loc_conf_t *lcf,
+@@ -1017,3 +1113,484 @@ ngx_http_rewrite_value(ngx_conf_t *cf, ngx_http_rewrite_loc_conf_t *lcf,
  
      return NGX_CONF_OK;
  }
@@ -272,9 +272,7 @@ index 0e6d4df..6da0009 100644
 +
 +    for (i = 1, cur = 1; i < cf->args->nelts; i++) {
 +
-+        if (value[i].len < 1
-+                || value[i].data[value[i].len-1] != ')'
-+            ) {
++        if (value[i].len < 1 || value[i].data[value[i].len-1] != ')') {
 +            continue;
 +        }
 +

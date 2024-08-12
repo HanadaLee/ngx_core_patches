@@ -162,3 +162,20 @@ if_all ($remote_addr = 192.168.1.1) ($http_user_agent ~ 'Mozilla') ($server_port
 * **Context:** *server, location*
 
 Specify multiple conditions. If any condition is true, then execute the directives inside the braces "{}". The other parts are the same as the "if_all" directive.
+
+Known limits: 
+
+The last character of a conditional statement cannot be ')', even if it is enclosed in quotes. For example, the following expression will cause a configuration test error.
+```
+if_all ($test_var = "test)") ($http_user_agent ~ 'Mozilla') ($server_port > 808) {
+    return 404
+}
+```
+If you must use a string ending with ')'， you might consider using a variable to back it up.
+```
+set $value "test)";
+if_all ($test_var = $value) ($http_user_agent ~ 'Mozilla') ($server_port > 808) {
+    return 404
+}
+```
+If it is a regular expression, we can avoid using ')' at the end in many ways.

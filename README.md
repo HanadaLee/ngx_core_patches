@@ -177,3 +177,32 @@ if_all ($test_var = $value) ($http_user_agent ~ 'Mozilla') ($server_port > 808) 
 }
 ```
 If it is a regular expression, we can avoid using ')' at the end in many ways.
+
+## ngx_http_default_error_page_optimize_1.25.3+.patch
+
+This patch is used to optimize the information displayed on the default error page to facilitate the collection of error feedback from clients.
+
+* **Syntax:** *error_page_server_info on | off*
+
+* **Default:** *error_page_server_info on*
+
+* **Context:** *http, server, location*
+
+Show up the following information in a default 4xx/5xx error page: The date, request client ip, the request id, and the hostname serving the request are included.
+
+* **Syntax:** *error_page_client_ip string*
+
+* **Default:** *-*
+
+* **Context:** *http, server, location*
+
+Specify the value of the ip item to be displayed on the default 4xx/5xx error page. Parameter value can contain variables. The value will be displayed on the default 
+4xx/5xx error page only when the error_page_server_info directive is enabled.
+
+* **Syntax:** *error_page_request_id string*
+
+* **Default:** *-*
+
+* **Context:** *http, server, location*
+
+Specify the value of the request id item to be displayed on the default 4xx/5xx error page. Parameter value can contain variables. The value will be displayed on the default 4xx/5xx error page only when the error_page_server_info directive is enabled.

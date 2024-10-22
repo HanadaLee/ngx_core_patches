@@ -61,24 +61,21 @@ When both the ssl and https_allow_http parameters are enabled for the listen dir
 
 ## ngx_http_proxy_and_grpc_header_control_inherit_1.25.3+.patch
 
-This patch introduces 'inherit' argument to proxy_set_header
-directive. When marked as such it will be merge inherited into child
-contexts regardless of the presence of other proxy_set_header
-directives within those contexts.
+Deprecated, please use ngx_http_proxy_module_ext_1.25.3+.patch
 
-This patch also introduces the 'proxy_set_header_inherit' directive
-which blocks the merge inheritance in receiving contexts when set to off.
+## ngx_http_proxy_module_ext_1.25.3+.patch
 
-The purpose of the added mechanics is to reduce repetition within the
+This patch introduces the 'proxy_set_header_inherit' directive
+which blocks the merge inheritance in receiving contexts when set to off. The purpose of the added mechanics is to reduce repetition within the
 nginx configuration for universally set (or boilerplate) request
 headers, while maintaining flexibility to set additional headers for
 specific paths.
+The original patch is from https://mailman.nginx.org/pipermail/nginx-devel/2023-November/XUGFHDLSLRTFLWIBYPSE7LTXFJHNZE3E.html
+This patch additionally provides grpc support, Also allows setting the :authory header (From https://github.com/api7/apisix-nginx-module/blob/main/patch/1.25.3.1/nginx-grpc_set_header_authority.patch).
+
+To enhance control over upstream cache behavior, this patch introduces some new cache-related directives.
 
 There is no change in behavior for existing configurations.
-
-The original patch is from https://mailman.nginx.org/pipermail/nginx-devel/2023-November/XUGFHDLSLRTFLWIBYPSE7LTXFJHNZE3E.html
-
-This patch additionally provides grpc support, Also allows setting the :authory header (From https://github.com/api7/apisix-nginx-module/blob/main/patch/1.25.3.1/nginx-grpc_set_header_authority.patch).
 
 * **Syntax:** *proxy_set_header_inherit on | off;*
 
@@ -95,6 +92,46 @@ Allows the merge inheritance of proxy_set_header in receiving contexts.
 * **Context:** *http, server, location*
 
 Allows the merge inheritance of grpc_set_header in receiving contexts.
+
+* **Syntax:** *proxy_cache_min_age time;*
+
+* **Default:** *proxy_cache_min_age 0s;*
+
+* **Context:** *http, server, location*
+
+If the received max-age/s-maxage of Cache-Control header from upstream is less than the specified minimum age, the max-age/s-maxage value is set to the configured minimum age value. For example, if the max-age/s-maxage value in the received HTTP header is 100s and the configured minimum age value is 200s, the effective cache time will be 200s. This directive does not rewrite the Cache-Control header.
+
+* **Syntax:** *proxy_ignore_cache_control field ...;*
+
+* **Default:** *-*
+
+* **Context:** *http, server, location*
+
+Disables processing of certain fields of Cache-Control header in the response from upstream. The following directives can be ignored:
+
+* no-cache
+* no-store
+* private
+* max-age
+* s-maxage
+* stale-while-revalidate
+* stale-if-error
+
+* **Syntax:** *proxy_cache_stale_if_error time;*
+
+* **Default:** *proxy_cache_stale_if_error 0s;*
+
+* **Context:** *http, server, location*
+
+The stale-if-error extension of the Cache-Control header field permits using a stale cached response in case of an error. When stale-if-error is missing from Cache-Control header, this directive will take effect instead of the stale-if-error extension of the Cache-Control header. This directive has lower priority than using the directive parameters of proxy_cache_use_stale.
+
+* **Syntax:** *proxy_cache_stale_while_revalidate time;*
+
+* **Default:** *proxy_cache_stale_while_revalidate 0s;*
+
+* **Context:** *http, server, location*
+
+The stale-while-revalidate extension of the Cache-Control header field permits using a stale cached response if it is currently being updated. When stale-while-revalidate is missing from Cache-Control header, this directive will take effect instead of the stale-while-revalidate extension of the Cache-Control header. This directive has lower priority than using the directive parameters of proxy_cache_use_stale.
 
 ## ngx_http_realip_module_ext_1.25.3+.patch
 

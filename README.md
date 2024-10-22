@@ -93,14 +93,6 @@ Allows the merge inheritance of proxy_set_header in receiving contexts.
 
 Allows the merge inheritance of grpc_set_header in receiving contexts.
 
-* **Syntax:** *proxy_cache_min_age time;*
-
-* **Default:** *proxy_cache_min_age 0s;*
-
-* **Context:** *http, server, location*
-
-If the received max-age/s-maxage of Cache-Control header from upstream is less than the specified minimum age, the max-age/s-maxage value is set to the configured minimum age value. For example, if the max-age/s-maxage value in the received HTTP header is 100s and the configured minimum age value is 200s, the effective cache time will be 200s. This directive does not rewrite the Cache-Control header.
-
 * **Syntax:** *proxy_ignore_cache_control field ...;*
 
 * **Default:** *-*
@@ -117,6 +109,18 @@ Disables processing of certain fields of Cache-Control header in the response fr
 * stale-while-revalidate
 * stale-if-error
 
+> fastcgi_ignore_cache_control, scgi_ignore_cache_control, uwsgi_ignore_cache_control directives are also available.
+
+* **Syntax:** *proxy_cache_min_age time;*
+
+* **Default:** *proxy_cache_min_age 0s;*
+
+* **Context:** *http, server, location*
+
+If the received max-age/s-maxage of Cache-Control header from upstream is less than the specified minimum age, the max-age/s-maxage value is set to the configured minimum age value. For example, if the max-age/s-maxage value in the received HTTP header is 100s and the configured minimum age value is 200s, the effective cache time will be 200s. This directive does not rewrite the Cache-Control header.
+
+> fastcgi_cache_min_age, scgi_cache_min_age, uwsgi_cache_min_age directives are also available.
+
 * **Syntax:** *proxy_cache_stale_if_error time;*
 
 * **Default:** *proxy_cache_stale_if_error 0s;*
@@ -125,6 +129,8 @@ Disables processing of certain fields of Cache-Control header in the response fr
 
 The stale-if-error extension of the Cache-Control header field permits using a stale cached response in case of an error. When stale-if-error is missing from Cache-Control header, this directive will take effect instead of the stale-if-error extension of the Cache-Control header. This directive has lower priority than using the directive parameters of proxy_cache_use_stale.
 
+> fastcgi_cache_stale_if_error, scgi_cache_stale_if_error, uwsgi_cache_stale_if_error directives are also available.
+
 * **Syntax:** *proxy_cache_stale_while_revalidate time;*
 
 * **Default:** *proxy_cache_stale_while_revalidate 0s;*
@@ -132,6 +138,8 @@ The stale-if-error extension of the Cache-Control header field permits using a s
 * **Context:** *http, server, location*
 
 The stale-while-revalidate extension of the Cache-Control header field permits using a stale cached response if it is currently being updated. When stale-while-revalidate is missing from Cache-Control header, this directive will take effect instead of the stale-while-revalidate extension of the Cache-Control header. This directive has lower priority than using the directive parameters of proxy_cache_use_stale.
+
+> fastcgi_cache_stale_while_revalidate, scgi_cache_stale_while_revalidate, uwsgi_cache_stale_while_revalidate directives are also available.
 
 ## ngx_http_realip_module_ext_1.25.3+.patch
 

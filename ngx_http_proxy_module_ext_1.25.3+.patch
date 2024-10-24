@@ -576,10 +576,108 @@ index c1731ff..7c38ab7 100644
          conf->upstream.cache_methods = prev->upstream.cache_methods;
      }
 diff --git a/src/http/ngx_http_upstream.c b/src/http/ngx_http_upstream.c
-index 2be233c..92e1cf6 100644
+index 2be233c..7675308 100644
 --- a/src/http/ngx_http_upstream.c
 +++ b/src/http/ngx_http_upstream.c
-@@ -471,6 +471,18 @@ ngx_conf_bitmask_t  ngx_http_upstream_ignore_headers_masks[] = {
+@@ -165,6 +165,10 @@ static ngx_int_t ngx_http_upstream_trailer_variable(ngx_http_request_t *r,
+     ngx_http_variable_value_t *v, uintptr_t data);
+ static ngx_int_t ngx_http_upstream_cookie_variable(ngx_http_request_t *r,
+     ngx_http_variable_value_t *v, uintptr_t data);
++static ngx_int_t ngx_http_upstream_ignore_headers_variable(ngx_http_request_t *r,
++    ngx_http_variable_value_t *v, uintptr_t data);
++static ngx_int_t ngx_http_upstream_ignore_cache_control_variable(ngx_http_request_t *r,
++    ngx_http_variable_value_t *v, uintptr_t data);
+ 
+ static char *ngx_http_upstream(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy);
+ static char *ngx_http_upstream_server(ngx_conf_t *cf, ngx_command_t *cmd,
+@@ -433,6 +437,86 @@ static ngx_http_variable_t  ngx_http_upstream_vars[] = {
+     { ngx_string("upstream_cookie_"), NULL, ngx_http_upstream_cookie_variable,
+       0, NGX_HTTP_VAR_NOCACHEABLE|NGX_HTTP_VAR_PREFIX, 0 },
+ 
++    { ngx_string("upstream_ignore_x_accel_redirect"), NULL,
++      ngx_http_upstream_ignore_headers_variable,
++      NGX_HTTP_UPSTREAM_IGN_XA_REDIRECT,
++      NGX_HTTP_VAR_NOCACHEABLE, 0 },
++
++    { ngx_string("upstream_ignore_x_accel_expires"), NULL,
++      ngx_http_upstream_ignore_headers_variable,
++      NGX_HTTP_UPSTREAM_IGN_XA_EXPIRES,
++      NGX_HTTP_VAR_NOCACHEABLE, 0 },
++
++    { ngx_string("upstream_ignore_expires"), NULL,
++      ngx_http_upstream_ignore_headers_variable,
++      NGX_HTTP_UPSTREAM_IGN_EXPIRES,
++      NGX_HTTP_VAR_NOCACHEABLE, 0 },
++
++    { ngx_string("upstream_ignore_cache_control"), NULL,
++      ngx_http_upstream_ignore_headers_variable,
++      NGX_HTTP_UPSTREAM_IGN_CACHE_CONTROL,
++      NGX_HTTP_VAR_NOCACHEABLE, 0 },
++
++    { ngx_string("upstream_ignore_set_cookie"), NULL,
++      ngx_http_upstream_ignore_headers_variable,
++      NGX_HTTP_UPSTREAM_IGN_SET_COOKIE,
++      NGX_HTTP_VAR_NOCACHEABLE, 0 },
++
++    { ngx_string("upstream_ignore_x_accel_limit_rate"), NULL,
++      ngx_http_upstream_ignore_headers_variable,
++      NGX_HTTP_UPSTREAM_IGN_XA_LIMIT_RATE,
++      NGX_HTTP_VAR_NOCACHEABLE, 0 },
++
++    { ngx_string("upstream_ignore_x_accel_buffering"), NULL,
++      ngx_http_upstream_ignore_headers_variable,
++      NGX_HTTP_UPSTREAM_IGN_XA_BUFFERING,
++      NGX_HTTP_VAR_NOCACHEABLE, 0 },
++
++    { ngx_string("upstream_ignore_x_accel_charset"), NULL,
++      ngx_http_upstream_ignore_headers_variable,
++      NGX_HTTP_UPSTREAM_IGN_XA_CHARSET,
++      NGX_HTTP_VAR_NOCACHEABLE, 0 },
++
++    { ngx_string("upstream_ignore_vary"), NULL,
++      ngx_http_upstream_ignore_headers_variable,
++      NGX_HTTP_UPSTREAM_IGN_VARY,
++      NGX_HTTP_VAR_NOCACHEABLE, 0 },
++
++    { ngx_string("upstream_ignore_no_cache"), NULL,
++      ngx_http_upstream_ignore_cache_control_variable,
++      NGX_HTTP_UPSTREAM_IGN_CC_NOCACHE,
++      NGX_HTTP_VAR_NOCACHEABLE, 0 },
++
++    { ngx_string("upstream_ignore_no_store"), NULL,
++      ngx_http_upstream_ignore_cache_control_variable,
++      NGX_HTTP_UPSTREAM_IGN_CC_NOSTORE,
++      NGX_HTTP_VAR_NOCACHEABLE, 0 },
++
++    { ngx_string("upstream_ignore_private"), NULL,
++      ngx_http_upstream_ignore_cache_control_variable,
++      NGX_HTTP_UPSTREAM_IGN_CC_PRIVATE,
++      NGX_HTTP_VAR_NOCACHEABLE, 0 },
++
++    { ngx_string("upstream_ignore_max_age"), NULL,
++      ngx_http_upstream_ignore_cache_control_variable,
++      NGX_HTTP_UPSTREAM_IGN_CC_MAXAGE,
++      NGX_HTTP_VAR_NOCACHEABLE, 0 },
++
++    { ngx_string("upstream_ignore_s_maxage"), NULL,
++      ngx_http_upstream_ignore_cache_control_variable,
++      NGX_HTTP_UPSTREAM_IGN_CC_SMAXAGE,
++      NGX_HTTP_VAR_NOCACHEABLE, 0 },
++
++    { ngx_string("upstream_ignore_stale_if_error"), NULL,
++      ngx_http_upstream_ignore_cache_control_variable,
++      NGX_HTTP_UPSTREAM_IGN_CC_STALE_WR,
++      NGX_HTTP_VAR_NOCACHEABLE, 0 },
++
++    { ngx_string("upstream_ignore_stale_while_revalidate"), NULL,
++      ngx_http_upstream_ignore_cache_control_variable,
++      NGX_HTTP_UPSTREAM_IGN_CC_STALE_IE,
++      NGX_HTTP_VAR_NOCACHEABLE, 0 },
++
+       ngx_http_null_variable
+ };
+ 
+@@ -471,6 +555,18 @@ ngx_conf_bitmask_t  ngx_http_upstream_ignore_headers_masks[] = {
  };
  
  
@@ -598,7 +696,7 @@ index 2be233c..92e1cf6 100644
  ngx_int_t
  ngx_http_upstream_create(ngx_http_request_t *r)
  {
-@@ -4840,21 +4852,30 @@ ngx_http_upstream_process_cache_control(ngx_http_request_t *r,
+@@ -4840,21 +4936,30 @@ ngx_http_upstream_process_cache_control(ngx_http_request_t *r,
          goto extensions;
      }
  
@@ -636,7 +734,7 @@ index 2be233c..92e1cf6 100644
  
      if (p) {
          n = 0;
-@@ -4878,7 +4899,11 @@ ngx_http_upstream_process_cache_control(ngx_http_request_t *r,
+@@ -4878,7 +4983,11 @@ ngx_http_upstream_process_cache_control(ngx_http_request_t *r,
              return NGX_OK;
          }
  
@@ -649,7 +747,7 @@ index 2be233c..92e1cf6 100644
          u->headers_in.expired = 0;
      }
  
-@@ -4887,7 +4912,7 @@ extensions:
+@@ -4887,7 +4996,7 @@ extensions:
      p = ngx_strlcasestrn(start, last, (u_char *) "stale-while-revalidate=",
                           23 - 1);
  
@@ -658,7 +756,7 @@ index 2be233c..92e1cf6 100644
          n = 0;
  
          for (p += 23; p < last; p++) {
-@@ -4906,11 +4931,14 @@ extensions:
+@@ -4906,11 +5015,14 @@ extensions:
  
          r->cache->updating_sec = n;
          r->cache->error_sec = n;
@@ -674,7 +772,7 @@ index 2be233c..92e1cf6 100644
          n = 0;
  
          for (p += 15; p < last; p++) {
-@@ -4928,6 +4956,8 @@ extensions:
+@@ -4928,6 +5040,8 @@ extensions:
          }
  
          r->cache->error_sec = n;
@@ -683,6 +781,61 @@ index 2be233c..92e1cf6 100644
      }
      }
  #endif
+@@ -5960,6 +6074,54 @@ ngx_http_upstream_cookie_variable(ngx_http_request_t *r,
+ }
+ 
+ 
++static ngx_int_t
++ngx_http_upstream_ignore_headers_variable(ngx_http_request_t *r,
++    ngx_http_variable_value_t *v, uintptr_t data)
++{
++    if (r->upstream == NULL || r->upstream->conf == NULL) {
++        v->not_found = 1;
++        return NGX_OK;
++    }
++
++    if (r->upstream->conf->ignore_headers & data) {
++        v->data = (u_char *) "1";
++    } else {
++        v->data = (u_char *) "0";
++    }
++
++    v->len = 1;
++    v->valid = 1;
++    v->no_cacheable = 0;
++    v->not_found = 0;
++
++    return NGX_OK;
++}
++
++
++static ngx_int_t
++ngx_http_upstream_ignore_cache_control_variable(ngx_http_request_t *r,
++    ngx_http_variable_value_t *v, uintptr_t data)
++{
++    if (r->upstream == NULL || r->upstream->conf == NULL) {
++        v->not_found = 1;
++        return NGX_OK;
++    }
++
++    if (r->upstream->conf->ignore_cache_control & data) {
++        v->data = (u_char *) "1";
++    } else {
++        v->data = (u_char *) "0";
++    }
++
++    v->len = 1;
++    v->valid = 1;
++    v->no_cacheable = 0;
++    v->not_found = 0;
++
++    return NGX_OK;
++}
++
++
+ #if (NGX_HTTP_CACHE)
+ 
+ static ngx_int_t
 diff --git a/src/http/ngx_http_upstream.h b/src/http/ngx_http_upstream.h
 index 15a35d9..27f51d5 100644
 --- a/src/http/ngx_http_upstream.h

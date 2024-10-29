@@ -158,9 +158,9 @@ real_ip_header X-Real-IP Cdn-Src-Ip X-Forwarded-For;
 ```
 The values ​​of the above headers will be checked in turn until a valid value is found.
 
-The request header field value that contains an optional port is also used to replace the client port (1.11.0). The address and port should be specified according to RFC 3986.
+The request header field value that contains an optional port is also used to replace the client port . The address and port should be specified according to RFC 3986.
 
-The proxy_protocol parameter (1.5.12) changes the client address to the one from the PROXY protocol header. The PROXY protocol must be previously enabled by setting the proxy_protocol parameter in the listen directive.
+The proxy_protocol parameter changes the client address to the one from the PROXY protocol header. The PROXY protocol must be previously enabled by setting the proxy_protocol parameter in the listen directive.
 
 ## ngx_http_rewrite_module_if_extend_1.25.3+.patch
 
@@ -251,3 +251,26 @@ Specify the value of the ip item to be displayed on the default 4xx/5xx error pa
 * **Context:** *http, server, location*
 
 Specify the value of the request id item to be displayed on the default 4xx/5xx error page. Parameter value can contain variables. The value will be displayed on the default 4xx/5xx error page only when the error_page_server_info directive is enabled.
+
+## ngx_http_gunzip_force_1.25.3+
+
+This is a simple patch modifying the NGINX gunzip filter module to force inflate compressed responses. This is desirable in the context of an upstream source that sends responses gzipped. Please read the "other comments" section to understand this will decompress all content, so you want to specify its use as specific as possible to avoid decompressing content that you otherwise would want left untouched.
+
+This serves multiple purposes:
+
+It maintains transfering gzipped content between upstream server(s) and nginx, thus reducing network bandwidth.
+Some modules require the upstream content to be uncompressed to work properly.
+It allows nginx to recompress the data (i.e. brotli) before sending to the client.
+This has been successfully tested up to version 1.20.0 (the current release as of this writing). I don't think the gunzip module code changes much (if any), so it should patch cleanly against older / future versions.
+
+The original patch is from http://mailman.nginx.org/pipermail/nginx-devel/2013-January/003276.html. The original author is Weibin Yao.
+
+NOTE: The gunzip module is not built by default, you must specify --with-http_gunzip_module when compiling nginx.
+
+* **Syntax:** *gunzip_force on | off*
+
+* **Default:** *gunzip_force off*
+
+* **Context:** *http, server, location*
+
+Enables or disables forced decompression of upstream content.
